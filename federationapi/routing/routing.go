@@ -195,6 +195,11 @@ func Setup(
 				}
 			}
 
+			// TODO: Decrypt the encrypted userID of the invitee here.
+			// roomVer, err := rsAPI.QueryRoomVersionForRoom(req.Context(),vars["roomID"]) 
+			// if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
+			//  userID, err := spec.DecryptUserID(vars["userID"], true)
+			// }
 			userID, err := spec.NewUserID(vars["userID"], true)
 			if err != nil {
 				return util.JSONResponse{

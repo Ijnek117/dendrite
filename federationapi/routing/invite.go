@@ -46,7 +46,7 @@ func InviteV3(
 			JSON: spec.InvalidParam("The invited user domain does not belong to this server"),
 		}
 	}
-
+	//TODO: I don't think I need to change anything here
 	input := gomatrixserverlib.HandleInviteV3Input{
 		HandleInviteInput: gomatrixserverlib.HandleInviteInput{
 			RoomVersion:       inviteReq.RoomVersion(),
