@@ -62,6 +62,7 @@ var sendEventDuration = prometheus.NewHistogramVec(
 //	/rooms/{roomID}/state/{eventType}/{stateKey}
 //
 // nolint: gocyclo
+// Kenji: Currently does translation from user_id to room_keys here.
 func SendEvent(
 	req *http.Request,
 	device *userapi.Device,

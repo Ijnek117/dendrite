@@ -251,7 +251,7 @@ func userIDForSender(roomID spec.RoomID, senderID spec.SenderID) (*spec.UserID, 
 	}
 	return spec.NewUserID(testUserID, true)
 }
-
+// Kenji: Could modify tests her to test newly created components
 func TestToClientEventsFormatSyncFederation(t *testing.T) { // nolint: gocyclo
 	ev, err := gomatrixserverlib.MustGetRoomVersion(gomatrixserverlib.RoomVersionPseudoIDs).NewEventFromTrustedJSON([]byte(`{
 		"type": "m.room.name",

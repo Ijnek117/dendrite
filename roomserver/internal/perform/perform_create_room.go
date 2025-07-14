@@ -492,7 +492,8 @@ func (c *Creator) PerformCreateRoom(ctx context.Context, userID spec.UserID, roo
 					JSON: spec.InternalServerError{},
 				}
 			}
-
+			//TODO: might need to change the fields? Will assuming room is created empty create 
+			// immediate problems?
 			err = c.RSAPI.PerformInvite(ctx, &api.PerformInviteRequest{
 				InviteInput: api.InviteInput{
 					RoomID:     roomID,

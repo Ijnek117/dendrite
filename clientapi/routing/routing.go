@@ -405,6 +405,7 @@ func Setup(
 			return SendBan(req, userAPI, device, vars["roomID"], cfg, rsAPI, asAPI)
 		}),
 	).Methods(http.MethodPost, http.MethodOptions)
+	// Kenji: Client-Server API endpoint for invite 
 	v3mux.Handle("/rooms/{roomID}/invite",
 		httputil.MakeAuthAPI("membership", userAPI, func(req *http.Request, device *userapi.Device) util.JSONResponse {
 			if r := rateLimits.Limit(req, device); r != nil {
@@ -414,6 +415,10 @@ func Setup(
 			if err != nil {
 				return util.ErrorResponse(err)
 			}
+			// roomVer, err := rsAPI.QueryRoomVersionForRoom(req.Context(),vars["roomID"]) 
+			// if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
+			// 	return SendEncryptedInvite(req, userAPI, device, vars["roomID"], cfg, rsAPI, asAPI)
+			// }
 			return SendInvite(req, userAPI, device, vars["roomID"], cfg, rsAPI, asAPI)
 		}),
 	).Methods(http.MethodPost, http.MethodOptions)

@@ -315,9 +315,84 @@ func SendInvite(
 		return *errRes
 	}
 
+	// TODO: choose between the two options:
+	roomVer, err := rsAPI.QueryRoomVersionForRoom(req.Context(),roomID) 
+	if err != nil {
+		return util.JSONResponse{
+			Code: http.StatusInternalServerError,
+			JSON: spec.InternalServerError{},
+		}
+	}
+			
+	if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
+		response, _ := sendEncryptedInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
+		return response
+	} else {
+		response, _ := sendInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
+		return response
+	}
+
 	// We already received the return value, so no need to check for an error here.
-	response, _ := sendInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
-	return response
+	// response, _ := sendInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
+	// return response
+}
+
+//TODO should be able to completely remove this.
+func SendEncryptedInvite(
+	req *http.Request, profileAPI userapi.ClientUserAPI, device *userapi.Device,
+	roomID string, cfg *config.ClientAPI,
+	rsAPI roomserverAPI.ClientRoomserverAPI, asAPI appserviceAPI.AppServiceInternalAPI,
+) util.JSONResponse {
+	
+	body, evTime, reqErr := extractEncryptedRequestData(req)
+	if reqErr != nil {
+		return *reqErr
+	}
+	
+	if body.UserID == "" {
+		return util.JSONResponse{
+			Code: http.StatusBadRequest,
+			JSON: spec.BadJSON("missing user_id"),
+		}
+	}
+	// No need to change. It is for the senders's UserID.
+	deviceUserID, err := spec.NewUserID(device.UserID, true)
+	if err != nil {
+		return util.JSONResponse{
+			Code: http.StatusForbidden,
+			JSON: spec.Forbidden("You don't have permission to kick this user, bad userID"),
+		}
+	}
+	// No need to change. It is for the sender's UserID.
+	errRes := checkMemberInRoom(req.Context(), rsAPI, *deviceUserID, roomID)
+	if errRes != nil {
+		return *errRes
+	}
+
+	roomVer, err := rsAPI.QueryRoomVersionForRoom(req.Context(),roomID) 
+	if err != nil {
+		return util.JSONResponse{
+			Code: http.StatusInternalServerError,
+			JSON: spec.InternalServerError{},
+		}
+	}
+
+	if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
+		response, _ := sendEncryptedInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
+		return response
+	} else {
+		response, _ := sendInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
+		return response
+	}
+	// We already received the return value, so no need to check for an error here.
+	// Call encrypted invite handler, could change body.UserID to body.EncryptedID or similar.
+	// if body.IsEncrypted {
+	// 	response, _ := sendEncryptedInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
+	// 	return response
+	// } else {
+	// 	response, _ := sendInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
+	// 	return response
+	// }
 }
 
 // sendInvite sends an invitation to a user. Returns a JSONResponse and an error
@@ -393,6 +468,103 @@ func sendInvite(
 			JSON: spec.InternalServerError{},
 		}, err
 	}
+
+	return util.JSONResponse{
+		Code: http.StatusOK,
+		JSON: struct{}{},
+	}, nil
+}
+// Changes could probably just be integrated in sendInvite instead. 
+func sendEncryptedInvite(
+	ctx context.Context,
+	device *userapi.Device,
+	roomID, userID, reason string,
+	cfg *config.ClientAPI,
+	rsAPI roomserverAPI.ClientRoomserverAPI,
+	evTime time.Time,
+) (util.JSONResponse, error) {
+	validRoomID, err := spec.NewRoomID(roomID)
+	if err != nil {
+		return util.JSONResponse{
+			Code: http.StatusBadRequest,
+			JSON: spec.InvalidParam("RoomID is invalid"),
+		}, err
+	}
+	inviter, err := spec.NewUserID(device.UserID, true)
+	if err != nil {
+		return util.JSONResponse{
+			Code: http.StatusInternalServerError,
+			JSON: spec.InternalServerError{},
+		}, err
+	}
+
+	// TODO: Modify based how it is encrypted
+	invitee, err := spec.NewEncryptedUserID(userID, true)
+	if err != nil {
+		return util.JSONResponse{
+			Code: http.StatusBadRequest,
+			JSON: spec.InvalidParam("EncryptedUserID is invalid"),
+		}, err
+	}
+
+	// Not Sure if we need to change this at all
+	identity, err := cfg.Matrix.SigningIdentityFor(device.UserDomain())
+	if err != nil {
+		return util.JSONResponse{
+			Code: http.StatusInternalServerError,
+			JSON: spec.InternalServerError{},
+		}, err
+	}
+	err = rsAPI.PerformInvite(ctx, &api.PerformInviteRequest{
+		InviteInput: roomserverAPI.InviteInput{
+			RoomID:  *validRoomID,
+			Inviter: *inviter,
+			//TODO: Modify to include servername OR NOT if the encrypted User_id is similar
+			Invitee:    *invitee,
+			Reason:     reason,
+			IsDirect:   false,
+			KeyID:      identity.KeyID,
+			PrivateKey: identity.PrivateKey,
+			EventTime:  evTime,
+		},
+		InviteRoomState: nil, // ask the roomserver to draw up invite room state for us
+		SendAsServer:    string(device.UserDomain()),
+	})
+
+	switch e := err.(type) {
+	case roomserverAPI.ErrInvalidID:
+		return util.JSONResponse{
+			Code: http.StatusBadRequest,
+			JSON: spec.Unknown(e.Error()),
+		}, e
+	case roomserverAPI.ErrNotAllowed:
+		return util.JSONResponse{
+			Code: http.StatusForbidden,
+			JSON: spec.Forbidden(e.Error()),
+		}, e
+	case nil:
+	default:
+		util.GetLogger(ctx).WithError(err).Error("PerformInvite failed")
+		sentry.CaptureException(err)
+		return util.JSONResponse{
+			Code: http.StatusInternalServerError,
+			JSON: spec.InternalServerError{},
+		}, err
+	}
+
+	// TODO: Don't need to send back the inviteeSenderID I think 
+	// inviteeSenderID, err := rsAPI.QuerySenderIDForUser(ctx, *validRoomID, *invitee)
+	// if err != nil {
+	// 	return util.JSONResponse{
+	// 		Code: http.StatusInternalServerError,
+	// 		JSON: spec.InternalServerError{},
+	// 	}, err
+	// }
+	// // Send the SenderID of the Invitee to the Client.
+	// return util.JSONResponse{
+	// 	Code: http.StatusOK,
+	// 	JSON: inviteeSenderID,
+	// }, nil
 
 	return util.JSONResponse{
 		Code: http.StatusOK,
@@ -508,6 +680,25 @@ func loadProfile(
 	}
 
 	return profile, err
+}
+
+// TODO: Could use if we need to add going for the hybrid approach
+func extractEncryptedRequestData(req *http.Request) (body *threepid.EncryptedMembershipRequest, evTime time.Time, resErr *util.JSONResponse) {
+
+	if reqErr := httputil.UnmarshalJSONRequest(req, &body); reqErr != nil {
+		resErr = reqErr
+		return
+	}
+
+	evTime, err := httputil.ParseTSParam(req)
+	if err != nil {
+		resErr = &util.JSONResponse{
+			Code: http.StatusBadRequest,
+			JSON: spec.InvalidParam(err.Error()),
+		}
+		return
+	}
+	return
 }
 
 func extractRequestData(req *http.Request) (body *threepid.MembershipRequest, evTime time.Time, resErr *util.JSONResponse) {

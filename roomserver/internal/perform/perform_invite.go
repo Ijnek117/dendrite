@@ -112,12 +112,13 @@ func (r *Inviter) ProcessInviteMembership(
 	}
 	return outputUpdates, nil
 }
-
+//Kenji: Currently handles a lot of the invite logic, would have to modify a bit.
 // nolint:gocyclo
 func (r *Inviter) PerformInvite(
 	ctx context.Context,
 	req *api.PerformInviteRequest,
 ) error {
+	// Gets the senderID for that user in this room, I assume it gets assigned at Pseudo RoomCreation.
 	senderID, err := r.RSAPI.QuerySenderIDForUser(ctx, req.InviteInput.RoomID, req.InviteInput.Inviter)
 	if err != nil {
 		return err
@@ -151,8 +152,10 @@ func (r *Inviter) PerformInvite(
 
 	isTargetLocal := r.Cfg.Matrix.IsLocalServerName(req.InviteInput.Invitee.Domain())
 
+	// Don't need to change as sender_key's should be managed by server.
 	signingKey := req.InviteInput.PrivateKey
 	if info.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs {
+		// Private part of the ed25519 key used to sign the invite event 
 		signingKey, err = r.RSAPI.GetOrCreateUserRoomPrivateKey(ctx, req.InviteInput.Inviter, req.InviteInput.RoomID)
 		if err != nil {
 			return err
@@ -205,6 +208,8 @@ func (r *Inviter) PerformInvite(
 				Depth:        res.Depth,
 			}, nil
 		},
+		// TODO: Will need to modify based on how the encrypted userID is formatted.
+		// Necessary if wanting to send back inviteeSenderID to the client. 
 		StoreSenderIDFromPublicID: func(ctx context.Context, senderID spec.SenderID, userIDRaw string, roomID spec.RoomID) error {
 			storeUserID, userErr := spec.NewUserID(userIDRaw, true)
 			if userErr != nil {
@@ -224,7 +229,7 @@ func (r *Inviter) PerformInvite(
 		}
 		return err
 	}
-
+	// TODO: look into this and change.
 	// Send the invite event to the roomserver input stream. This will
 	// notify existing users in the room about the invite, update the
 	// membership table and ensure that the event is ready and available

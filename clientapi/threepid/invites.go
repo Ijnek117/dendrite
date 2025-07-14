@@ -36,6 +36,17 @@ type MembershipRequest struct {
 	Address  string `json:"address"`
 }
 
+// TODO: change to using this? EncryptedMembershipRequest represents the body of an incoming POST request
+// on /rooms/{roomID}/(join|kick|ban|unban|leave|invite)
+type EncryptedMembershipRequest struct {
+	UserID   string `json:"user_id"`
+	IsEncrypted bool `json:"is_encrypted"`
+	Reason   string `json:"reason"`
+	IDServer string `json:"id_server"`
+	Medium   string `json:"medium"`
+	Address  string `json:"address"`
+}
+
 // idServerLookupResponse represents the response described at https://matrix.org/docs/spec/client_server/r0.2.0.html#get-matrix-identity-api-v1-lookup
 type idServerLookupResponse struct {
 	TS         int64                        `json:"ts"`
