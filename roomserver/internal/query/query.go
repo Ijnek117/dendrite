@@ -1051,6 +1051,7 @@ func (r *Queryer) QuerySenderIDForUser(ctx context.Context, roomID spec.RoomID, 
 
 	switch version {
 	case gomatrixserverlib.RoomVersionPseudoIDs:
+	// case gomatrixserverlib.RoomVersionPseudoAnonymity:
 		key, err := r.DB.SelectUserRoomPublicKey(ctx, userID, roomID)
 		if err != nil {
 			return nil, err

@@ -88,6 +88,7 @@ func SendEvent(
 
 	// Translate user ID state keys to room keys in pseudo ID rooms
 	if roomVersion == gomatrixserverlib.RoomVersionPseudoIDs && stateKey != nil {
+		//TODO:|| roomVersion == gomatrixserverlib.RoomVersionPseudoAnonymity
 		parsedRoomID, innerErr := spec.NewRoomID(roomID)
 		if innerErr != nil {
 			return util.JSONResponse{
@@ -142,6 +143,7 @@ func SendEvent(
 
 	// for power level events we need to replace the userID with the pseudoID
 	if roomVersion == gomatrixserverlib.RoomVersionPseudoIDs && eventType == spec.MRoomPowerLevels {
+		//TODO: || roomVersion == gomatrixserverlib.RoomVersionPseudoAnonymity
 		err = updatePowerLevels(req, r, roomID, rsAPI)
 		if err != nil {
 			return util.JSONResponse{

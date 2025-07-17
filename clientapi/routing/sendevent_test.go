@@ -150,6 +150,7 @@ func (s *sendEventTestRoomserverAPI) InputRoomEvents(ctx context.Context, req *r
 // Test that user ID state keys are translated correctly
 func Test_SendEvent_PseudoIDStateKeys(t *testing.T) {
 	nonpseudoIDRoomVersion := gomatrixserverlib.RoomVersionV10
+	// pseudoIDRoomVersion := gomatrixserverlib.RoomVersionPseudoAnonymity
 	pseudoIDRoomVersion := gomatrixserverlib.RoomVersionPseudoIDs
 
 	senderKeySeed := make([]byte, 32)

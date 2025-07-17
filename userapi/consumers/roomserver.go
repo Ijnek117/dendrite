@@ -652,6 +652,9 @@ func (s *OutputRoomEventConsumer) notifyLocal(ctx context.Context, event *rstype
 func (s *OutputRoomEventConsumer) evaluatePushRules(ctx context.Context, event *rstypes.HeaderedEvent, mem *localMembership, roomSize int) ([]*pushrules.Action, error) {
 	user := ""
 	sender, err := s.rsAPI.QueryUserIDForSender(ctx, event.RoomID(), event.SenderID())
+	if sender == nil {
+		return nil, nil
+	}
 	if err == nil {
 		user = sender.String()
 	}

@@ -155,6 +155,7 @@ func (r *Inviter) PerformInvite(
 	// Don't need to change as sender_key's should be managed by server.
 	signingKey := req.InviteInput.PrivateKey
 	if info.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs {
+		//TODO:|| createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoAnonymity
 		// Private part of the ed25519 key used to sign the invite event 
 		signingKey, err = r.RSAPI.GetOrCreateUserRoomPrivateKey(ctx, req.InviteInput.Inviter, req.InviteInput.RoomID)
 		if err != nil {
@@ -239,6 +240,7 @@ func (r *Inviter) PerformInvite(
 		InputRoomEvents: []api.InputRoomEvent{
 			{
 				Kind:         api.KindNew,
+				// No reference of UserIDs for now, it should be created with value of null.
 				Event:        &types.HeaderedEvent{PDU: inviteEvent},
 				Origin:       req.InviteInput.Inviter.Domain(),
 				SendAsServer: req.SendAsServer,

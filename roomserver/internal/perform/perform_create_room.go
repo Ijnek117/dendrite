@@ -68,7 +68,8 @@ func (c *Creator) PerformCreateRoom(ctx context.Context, userID spec.UserID, roo
 	}
 
 	var senderID spec.SenderID
-	if createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs {
+	if createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs{
+		//TODO: || createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoAnonymity
 		// create user room key if needed
 		key, keyErr := c.RSAPI.GetOrCreateUserRoomPrivateKey(ctx, userID, roomID)
 		if keyErr != nil {
@@ -170,6 +171,7 @@ func (c *Creator) PerformCreateRoom(ctx context.Context, userID spec.UserID, roo
 
 	// If we are creating a room with pseudo IDs, create and sign the MXIDMapping
 	if createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs {
+	//TODO:|| createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoAnonymity
 		var pseudoIDKey ed25519.PrivateKey
 		pseudoIDKey, err = c.RSAPI.GetOrCreateUserRoomPrivateKey(ctx, userID, roomID)
 		if err != nil {

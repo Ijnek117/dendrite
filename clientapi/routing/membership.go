@@ -324,7 +324,8 @@ func SendInvite(
 		}
 	}
 			
-	if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
+	// if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
+	if roomVer == gomatrixserverlib.RoomVersionPseudoIDs {
 		response, _ := sendEncryptedInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
 		return response
 	} else {
@@ -377,7 +378,8 @@ func SendEncryptedInvite(
 		}
 	}
 
-	if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
+	// if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
+	if roomVer == gomatrixserverlib.RoomVersionPseudoIDs {
 		response, _ := sendEncryptedInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
 		return response
 	} else {

@@ -442,6 +442,7 @@ func (r *Inputer) processRoomEvent(
 
 	// TODO: Revist this to ensure we don't replace a current state mxid_mapping with an older one.
 	if event.Version() == gomatrixserverlib.RoomVersionPseudoIDs && event.Type() == spec.MRoomMember {
+		// || event.Version() == gomatrixserverlib.RoomVersionPseudoAnonymity 
 		mapping := gomatrixserverlib.MemberContent{}
 		if err = json.Unmarshal(event.Content(), &mapping); err != nil {
 			return err

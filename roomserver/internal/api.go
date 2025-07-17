@@ -325,6 +325,7 @@ func (r *RoomserverInternalAPI) SigningIdentityFor(ctx context.Context, roomID s
 		}
 	}
 	if roomVersion == gomatrixserverlib.RoomVersionPseudoIDs {
+		//TODO:|| roomVersion == gomatrixserverlib.RoomVersionPseudoAnonymity
 		privKey, err := r.GetOrCreateUserRoomPrivateKey(ctx, senderID, roomID)
 		if err != nil {
 			return fclient.SigningIdentity{}, err

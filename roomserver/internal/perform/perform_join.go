@@ -192,6 +192,7 @@ func (r *Joiner) performJoinRoomByID(
 	info, err := r.DB.RoomInfo(ctx, req.RoomIDOrAlias)
 	if err == nil && info != nil {
 		switch info.RoomVersion {
+		// case gomatrixserverlib.RoomVersionPseudoAnonymity:
 		case gomatrixserverlib.RoomVersionPseudoIDs:
 			senderIDPtr, queryErr := r.Queryer.QuerySenderIDForUser(ctx, *roomID, *userID)
 			if queryErr == nil {
@@ -283,6 +284,7 @@ func (r *Joiner) performJoinRoomByID(
 
 	// at this point we know we have an existing room
 	if inRoomRes.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs {
+		//TODO:|| createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoAnonymity
 		var pseudoIDKey ed25519.PrivateKey
 		pseudoIDKey, err = r.RSAPI.GetOrCreateUserRoomPrivateKey(ctx, *userID, *roomID)
 		if err != nil {

@@ -146,6 +146,7 @@ func ToClientEvent(se gomatrixserverlib.PDU, format ClientEventFormat, userIDFor
 	}
 
 	if format != FormatSyncFederation && se.Version() == gomatrixserverlib.RoomVersionPseudoIDs {
+		//se.Version() == gomatrixserverlib.RoomVersionPseudoAnonymity:
 		err := updatePseudoIDs(&ce, se, userIDForSender, format)
 		if err != nil {
 			return nil, err
@@ -297,6 +298,7 @@ func GetUpdatedInviteRoomState(userIDForSender spec.UserIDForSender, inviteRoomS
 	}
 
 	if event.Version() == gomatrixserverlib.RoomVersionPseudoIDs && eventFormat != FormatSyncFederation {
+		//event.Version() == gomatrixserverlib.RoomVersionPseudoAnonymity:
 		for i, ev := range inviteStateEvents {
 			userID, userIDErr := userIDForSender(roomID, spec.SenderID(ev.SenderID))
 			if userIDErr != nil {
