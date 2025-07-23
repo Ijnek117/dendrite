@@ -124,15 +124,20 @@ func (r *Inputer) processRoomEvent(
 	if roomInfo == nil && !isCreateEvent {
 		return fmt.Errorf("room %s does not exist for event %s", event.RoomID().String(), event.EventID())
 	}
-	sender, err := r.Queryer.QueryUserIDForSender(ctx, event.RoomID(), event.SenderID())
-	if err != nil {
-		return fmt.Errorf("failed getting userID for sender %q. %w", event.SenderID(), err)
-	}
+	// TODO: K we are no longer storing the mxid_mapping of users from other servers
+	// TODO: K sets up empty sender and correct senderDomain. I'm not sure if this messes anything up
+	var sender *spec.UserID
 	senderDomain := spec.ServerName("")
-	if sender != nil {
-		senderDomain = sender.Domain()
+	if event.Version() == gomatrixserverlib.RoomVersionPseudoIDs && event.Type() == spec.MRoomMember {
+		var err error
+		mapping := gomatrixserverlib.MemberContent{}
+		if err = json.Unmarshal(event.Content(), &mapping); err != nil {
+			return err
+		}
+		if mapping.MXIDMapping != nil {
+			senderDomain = spec.ServerName(mapping.MXIDMapping.UserID)
+		}
 	}
-
 	// If we already know about this outlier and it hasn't been rejected
 	// then we won't attempt to reprocess it. If it was rejected or has now
 	// arrived as a different kind of event, then we can attempt to reprocess,
@@ -157,6 +162,7 @@ func (r *Inputer) processRoomEvent(
 	}
 
 	var missingAuth, missingPrev bool
+	var err error
 	serverRes := &fedapi.QueryJoinedHostServerNamesInRoomResponse{}
 	if !isCreateEvent {
 		var missingAuthIDs, missingPrevIDs []string
@@ -195,6 +201,7 @@ func (r *Inputer) processRoomEvent(
 		}
 		// Only perform this check if the sender mxid_mapping can be resolved.
 		// Don't fail processing the event if we have no mxid_maping.
+		// TODO: K shouldn't mess anything only changes ordering.
 		if sender != nil && senderDomain != input.Origin && senderDomain != r.Cfg.Matrix.ServerName {
 			serverRes.ServerNames = append(serverRes.ServerNames, senderDomain)
 			delete(servers, senderDomain)
@@ -216,6 +223,8 @@ func (r *Inputer) processRoomEvent(
 	isRejected := false
 	var rejectionErr error
 
+	//TODO: K eventually modify this to not use the UserID, it's only working atm
+	// because the encrypted userID is the same as the normal userID
 	// Check if the event is allowed by its auth events. If it isn't then
 	// we consider the event to be "rejected" — it will still be persisted.
 	if err = gomatrixserverlib.Allowed(event, authEvents, func(roomID spec.RoomID, senderID spec.SenderID) (*spec.UserID, error) {
@@ -442,20 +451,30 @@ func (r *Inputer) processRoomEvent(
 
 	// TODO: Revist this to ensure we don't replace a current state mxid_mapping with an older one.
 	if event.Version() == gomatrixserverlib.RoomVersionPseudoIDs && event.Type() == spec.MRoomMember {
-		// || event.Version() == gomatrixserverlib.RoomVersionPseudoAnonymity 
 		mapping := gomatrixserverlib.MemberContent{}
 		if err = json.Unmarshal(event.Content(), &mapping); err != nil {
 			return err
 		}
+		// TODO: Kenji we are only storing the mapping of users from other servers.
 		if mapping.MXIDMapping != nil {
-			storeUserID, userErr := spec.NewUserID(mapping.MXIDMapping.UserID, true)
-			if userErr != nil {
-				return userErr
+			var storeUserID *spec.UserID
+			var userErr error
+			// Can be modified to be any userSigil rather than hardcoded
+			if mapping.MXIDMapping.UserID[0] != '@' {
+				if !r.Cfg.Matrix.IsLocalServerName(spec.ServerName(mapping.MXIDMapping.UserID)) {
+					customID := "@a:" + mapping.MXIDMapping.UserID
+					storeUserID, userErr = spec.NewUserID(customID, true)
+					if userErr != nil {
+						return userErr
+					}
+
+					err = r.RSAPI.StoreUserRoomPublicKey(ctx, mapping.MXIDMapping.UserRoomKey, *storeUserID, event.RoomID())
+					if err != nil {
+						return fmt.Errorf("failed storing user room public key: %w", err)
+					}
+				}
 			}
-			err = r.RSAPI.StoreUserRoomPublicKey(ctx, mapping.MXIDMapping.UserRoomKey, *storeUserID, event.RoomID())
-			if err != nil {
-				return fmt.Errorf("failed storing user room public key: %w", err)
-			}
+
 		}
 	}
 

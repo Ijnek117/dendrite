@@ -222,7 +222,15 @@ func SendJoin(
 			return rsAPI.StoreUserRoomPublicKey(ctx, senderID, *userID, roomID)
 		},
 	}
-	response, joinErr := gomatrixserverlib.HandleSendJoin(input)
+	var response *gomatrixserverlib.HandleSendJoinResponse
+	var joinErr error
+	if input.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs {
+		response, joinErr = gomatrixserverlib.HandlePseudoSendJoin(input)
+		
+	} else {
+		response, joinErr = gomatrixserverlib.HandleSendJoin(input)
+	}
+
 	switch e := joinErr.(type) {
 	case nil:
 	case spec.InternalServerError:

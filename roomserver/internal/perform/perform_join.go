@@ -292,11 +292,11 @@ func (r *Joiner) performJoinRoomByID(
 			return "", "", err
 		}
 
+		// TODO: Eventually will need to create an entirely new object instead of MXIDMapping but for now this seems ok.
 		mapping := &gomatrixserverlib.MXIDMapping{
 			UserRoomKey: spec.SenderIDFromPseudoIDKey(pseudoIDKey),
-			UserID:      userID.String(),
+			UserID:      string(userID.Domain()),
 		}
-
 		// Sign the mapping with the server identity
 		if err = mapping.Sign(identity.ServerName, identity.KeyID, identity.PrivateKey); err != nil {
 			return "", "", err

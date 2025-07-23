@@ -68,8 +68,7 @@ func (c *Creator) PerformCreateRoom(ctx context.Context, userID spec.UserID, roo
 	}
 
 	var senderID spec.SenderID
-	if createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs{
-		//TODO: || createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoAnonymity
+	if createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs {
 		// create user room key if needed
 		key, keyErr := c.RSAPI.GetOrCreateUserRoomPrivateKey(ctx, userID, roomID)
 		if keyErr != nil {
@@ -171,7 +170,6 @@ func (c *Creator) PerformCreateRoom(ctx context.Context, userID spec.UserID, roo
 
 	// If we are creating a room with pseudo IDs, create and sign the MXIDMapping
 	if createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs {
-	//TODO:|| createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoAnonymity
 		var pseudoIDKey ed25519.PrivateKey
 		pseudoIDKey, err = c.RSAPI.GetOrCreateUserRoomPrivateKey(ctx, userID, roomID)
 		if err != nil {
@@ -181,10 +179,11 @@ func (c *Creator) PerformCreateRoom(ctx context.Context, userID spec.UserID, roo
 				JSON: spec.InternalServerError{},
 			}
 		}
-
+		// TODO: K modified to only send domain
 		mapping := &gomatrixserverlib.MXIDMapping{
 			UserRoomKey: spec.SenderIDFromPseudoIDKey(pseudoIDKey),
-			UserID:      userID.String(),
+			// UserID:      userID.String(),
+			UserID: string(userID.Domain()),
 		}
 
 		// Sign the mapping with the server identity
@@ -494,7 +493,7 @@ func (c *Creator) PerformCreateRoom(ctx context.Context, userID spec.UserID, roo
 					JSON: spec.InternalServerError{},
 				}
 			}
-			//TODO: might need to change the fields? Will assuming room is created empty create 
+			//TODO: might need to change the fields? Will assuming room is created empty create
 			// immediate problems?
 			err = c.RSAPI.PerformInvite(ctx, &api.PerformInviteRequest{
 				InviteInput: api.InviteInput{

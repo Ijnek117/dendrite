@@ -81,6 +81,7 @@ func JoinRoomByIDOrAlias(
 	done := make(chan util.JSONResponse, 1)
 	go func() {
 		defer close(done)
+		//TODO: K I edited the rsAPi.PerformJoin function
 		roomID, _, err := rsAPI.PerformJoin(req.Context(), &joinReq)
 		var response util.JSONResponse
 

@@ -196,7 +196,7 @@ func Setup(
 			}
 
 			// TODO: Decrypt the encrypted userID of the invitee here.
-			// roomVer, err := rsAPI.QueryRoomVersionForRoom(req.Context(),vars["roomID"]) 
+			// roomVer, err := rsAPI.QueryRoomVersionForRoom(req.Context(),vars["roomID"])
 			// if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
 			//  userID, err := spec.DecryptUserID(vars["userID"], true)
 			// }
@@ -349,7 +349,53 @@ func Setup(
 		)).Methods(http.MethodPut, http.MethodDelete)
 	}
 
-	v1fedmux.Handle("/make_join/{roomID}/{userID}", MakeFedAPI(
+	// v1fedmux.Handle("/make_join/{roomID}/{userID}", MakeFedAPI(
+	// 	"federation_make_join", cfg.Matrix.ServerName, cfg.Matrix.IsLocalServerName, keys, wakeup,
+	// 	func(httpReq *http.Request, request *fclient.FederationRequest, vars map[string]string) util.JSONResponse {
+	// 		if roomserverAPI.IsServerBannedFromRoom(httpReq.Context(), rsAPI, vars["roomID"], request.Origin()) {
+	// 			return util.JSONResponse{
+	// 				Code: http.StatusForbidden,
+	// 				JSON: spec.Forbidden("Forbidden by server ACLs"),
+	// 			}
+	// 		}
+	// 		queryVars := httpReq.URL.Query()
+	// 		remoteVersions := []gomatrixserverlib.RoomVersion{}
+	// 		if vers, ok := queryVars["ver"]; ok {
+	// 			// The remote side supplied a ?ver= so use that to build up the list
+	// 			// of supported room versions
+	// 			for _, v := range vers {
+	// 				remoteVersions = append(remoteVersions, gomatrixserverlib.RoomVersion(v))
+	// 			}
+	// 		} else {
+	// 			// The remote side didn't supply a ?ver= so just assume that they only
+	// 			// support room version 1, as per the spec
+	// 			// https://matrix.org/docs/spec/server_server/r0.1.3#get-matrix-federation-v1-make-join-roomid-userid
+	// 			remoteVersions = append(remoteVersions, gomatrixserverlib.RoomVersionV1)
+	// 		}
+	// 		userID, err := spec.NewUserID(vars["userID"], true)
+	// 		if err != nil {
+	// 			return util.JSONResponse{
+	// 				Code: http.StatusBadRequest,
+	// 				JSON: spec.InvalidParam("Invalid UserID"),
+	// 			}
+	// 		}
+	// 		roomID, err := spec.NewRoomID(vars["roomID"])
+	// 		if err != nil {
+	// 			return util.JSONResponse{
+	// 				Code: http.StatusBadRequest,
+	// 				JSON: spec.InvalidParam("Invalid RoomID"),
+	// 			}
+	// 		}
+
+	// 		logrus.Debugf("Processing make_join for user %s, room %s", userID.String(), roomID.String())
+	// 		return MakeJoin(
+	// 			httpReq, request, cfg, rsAPI, *roomID, *userID, remoteVersions,
+	// 		)
+	// 	},
+	// )).Methods(http.MethodGet)
+
+	// TODO: Combine this with the above commented out endpoint by checking if senderID/userID params Exist?
+	v1fedmux.Handle("/make_join/{roomID}/{senderID}", MakeFedAPI(
 		"federation_make_join", cfg.Matrix.ServerName, cfg.Matrix.IsLocalServerName, keys, wakeup,
 		func(httpReq *http.Request, request *fclient.FederationRequest, vars map[string]string) util.JSONResponse {
 			if roomserverAPI.IsServerBannedFromRoom(httpReq.Context(), rsAPI, vars["roomID"], request.Origin()) {
@@ -372,14 +418,8 @@ func Setup(
 				// https://matrix.org/docs/spec/server_server/r0.1.3#get-matrix-federation-v1-make-join-roomid-userid
 				remoteVersions = append(remoteVersions, gomatrixserverlib.RoomVersionV1)
 			}
+			var senderID spec.SenderID = spec.SenderID(vars["senderID"])
 
-			userID, err := spec.NewUserID(vars["userID"], true)
-			if err != nil {
-				return util.JSONResponse{
-					Code: http.StatusBadRequest,
-					JSON: spec.InvalidParam("Invalid UserID"),
-				}
-			}
 			roomID, err := spec.NewRoomID(vars["roomID"])
 			if err != nil {
 				return util.JSONResponse{
@@ -387,8 +427,16 @@ func Setup(
 					JSON: spec.InvalidParam("Invalid RoomID"),
 				}
 			}
+			userID, err := rsAPI.QueryUserIDForSender(httpReq.Context(), *roomID, senderID)
+			fmt.Print(userID)
+			if err != nil {
+				return util.JSONResponse{
+					Code: http.StatusBadRequest,
+					JSON: spec.InvalidParam("Invalid SenderID"),
+				}
+			}
+			logrus.Debugf("Processing make_join for user %s, room %s", senderID, roomID.String())
 
-			logrus.Debugf("Processing make_join for user %s, room %s", userID.String(), roomID.String())
 			return MakeJoin(
 				httpReq, request, cfg, rsAPI, *roomID, *userID, remoteVersions,
 			)
@@ -451,7 +499,6 @@ func Setup(
 					JSON: spec.InvalidParam("Invalid RoomID"),
 				}
 			}
-
 			return SendJoin(
 				httpReq, request, cfg, rsAPI, keys, *roomID, eventID,
 			)
