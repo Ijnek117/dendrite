@@ -649,6 +649,57 @@ func (r *FederationInternalAPI) SendInviteV3(
 	return inviteEvent, nil
 }
 
+func (r *FederationInternalAPI) SendEncryptedInvite(
+	ctx context.Context,
+	event gomatrixserverlib.ProtoEvent,
+	invitee spec.EncryptedUserID,
+	version gomatrixserverlib.RoomVersion,
+	strippedState []gomatrixserverlib.InviteStrippedState,
+) (gomatrixserverlib.PDU, error) {
+	validRoomID, err := spec.NewRoomID(event.RoomID)
+	if err != nil {
+		return nil, err
+	}
+	verImpl, err := gomatrixserverlib.GetRoomVersion(version)
+	if err != nil {
+		return nil, err
+	}
+
+	inviter, err := r.rsAPI.QueryUserIDForSender(ctx, *validRoomID, spec.SenderID(event.SenderID))
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO (devon): This should be allowed via a relay. Currently only transactions
+	// can be sent to relays. Would need to extend relays to handle invites.
+	if !r.shouldAttemptDirectFederation(invitee.Domain()) {
+		return nil, fmt.Errorf("relay servers have no meaningful response for invite.")
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"user_id":      invitee.String(),
+		"room_id":      event.RoomID,
+		"room_version": version,
+		"destination":  invitee.Domain(),
+	}).Info("Sending invite")
+
+	inviteReq, err := fclient.NewInviteV3Request(event, version, strippedState)
+	if err != nil {
+		return nil, fmt.Errorf("gomatrixserverlib.NewInviteV3Request: %w", err)
+	}
+
+	inviteRes, err := r.federation.SendEncryptedInvite(ctx, inviter.Domain(), invitee.Domain(), inviteReq, invitee)
+	if err != nil {
+		return nil, fmt.Errorf("r.federation.SendInviteV3: failed to send invite: %w", err)
+	}
+
+	inviteEvent, err := verImpl.NewEventFromUntrustedJSON(inviteRes.Event)
+	if err != nil {
+		return nil, fmt.Errorf("r.federation.SendInviteV3 failed to decode event response: %w", err)
+	}
+	return inviteEvent, nil
+}
+
 // PerformServersAlive implements api.FederationInternalAPI
 func (r *FederationInternalAPI) PerformBroadcastEDU(
 	ctx context.Context,

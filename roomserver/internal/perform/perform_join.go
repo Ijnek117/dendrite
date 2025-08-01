@@ -192,7 +192,6 @@ func (r *Joiner) performJoinRoomByID(
 	info, err := r.DB.RoomInfo(ctx, req.RoomIDOrAlias)
 	if err == nil && info != nil {
 		switch info.RoomVersion {
-		// case gomatrixserverlib.RoomVersionPseudoAnonymity:
 		case gomatrixserverlib.RoomVersionPseudoIDs:
 			senderIDPtr, queryErr := r.Queryer.QuerySenderIDForUser(ctx, *roomID, *userID)
 			if queryErr == nil {
@@ -284,7 +283,6 @@ func (r *Joiner) performJoinRoomByID(
 
 	// at this point we know we have an existing room
 	if inRoomRes.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs {
-		//TODO:|| createRequest.RoomVersion == gomatrixserverlib.RoomVersionPseudoAnonymity
 		var pseudoIDKey ed25519.PrivateKey
 		pseudoIDKey, err = r.RSAPI.GetOrCreateUserRoomPrivateKey(ctx, *userID, *roomID)
 		if err != nil {
@@ -292,7 +290,8 @@ func (r *Joiner) performJoinRoomByID(
 			return "", "", err
 		}
 
-		// TODO: Eventually will need to create an entirely new object instead of MXIDMapping but for now this seems ok.
+		// TODO: Create a new object instead of MXIDMapping
+		// For now this seems to work.
 		mapping := &gomatrixserverlib.MXIDMapping{
 			UserRoomKey: spec.SenderIDFromPseudoIDKey(pseudoIDKey),
 			UserID:      string(userID.Domain()),

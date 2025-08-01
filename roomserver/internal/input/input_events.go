@@ -201,7 +201,6 @@ func (r *Inputer) processRoomEvent(
 		}
 		// Only perform this check if the sender mxid_mapping can be resolved.
 		// Don't fail processing the event if we have no mxid_maping.
-		// TODO: K shouldn't mess anything only changes ordering.
 		if sender != nil && senderDomain != input.Origin && senderDomain != r.Cfg.Matrix.ServerName {
 			serverRes.ServerNames = append(serverRes.ServerNames, senderDomain)
 			delete(servers, senderDomain)
@@ -455,11 +454,11 @@ func (r *Inputer) processRoomEvent(
 		if err = json.Unmarshal(event.Content(), &mapping); err != nil {
 			return err
 		}
-		// TODO: Kenji we are only storing the mapping of users from other servers.
+		// TODO: K we are only storing the mapping of users from other servers.
 		if mapping.MXIDMapping != nil {
 			var storeUserID *spec.UserID
 			var userErr error
-			// Can be modified to be any userSigil rather than hardcoded
+			// Should be modified to be any userSigil rather than hardcoded
 			if mapping.MXIDMapping.UserID[0] != '@' {
 				if !r.Cfg.Matrix.IsLocalServerName(spec.ServerName(mapping.MXIDMapping.UserID)) {
 					customID := "@a:" + mapping.MXIDMapping.UserID

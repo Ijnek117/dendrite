@@ -67,6 +67,25 @@ type PerformInviteRequest struct {
 	TransactionID   *TransactionID                          `json:"transaction_id"`
 }
 
+type EncryptedInviteInput struct {
+	RoomID     spec.RoomID
+	Inviter    spec.UserID
+	Invitee    spec.EncryptedUserID
+	Reason     string
+	IsDirect   bool
+	KeyID      gomatrixserverlib.KeyID
+	PrivateKey ed25519.PrivateKey
+	EventTime  time.Time
+}
+
+type PerformEncryptedInviteRequest struct {
+	InviteInput EncryptedInviteInput
+	InviteRoomState []gomatrixserverlib.InviteStrippedState `json:"invite_room_state"`
+	SendAsServer    string                                  `json:"send_as_server"`
+	TransactionID   *TransactionID                          `json:"transaction_id"`
+}
+
+
 type PerformPeekRequest struct {
 	RoomIDOrAlias string            `json:"room_id_or_alias"`
 	UserID        string            `json:"user_id"`

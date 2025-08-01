@@ -8,6 +8,7 @@ package routing
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -30,6 +31,14 @@ import (
 	"github.com/matrix-org/util"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+
+	"crypto/rand"   // Needed for rsa.DecryptOAEP (even if nil, good practice)
+	"crypto/rsa"    // For RSA private key type and decryption
+	"crypto/sha256" // Must match the hash used during encryption (e.g., SHA256 for OAEP)
+	"crypto/x509"   // For parsing private keys
+	"encoding/pem"  // For decoding PEM blocks
+	"log"
+	"os" // For file existence checks
 )
 
 const (
@@ -61,7 +70,6 @@ func Setup(
 	keyMux := routers.Keys
 	wkMux := routers.WellKnown
 	cfg := &dendriteCfg.FederationAPI
-
 	if enableMetrics {
 		prometheus.MustRegister(
 			internal.PDUCountTotal, internal.EDUCountTotal,
@@ -194,19 +202,60 @@ func Setup(
 					JSON: spec.Forbidden("Forbidden by server ACLs"),
 				}
 			}
+			/* TODO: Need to find a way to access the roomversion down the line
+			roomVer, err := rsAPI.QueryRoomVersionForRoom(request., vars["roomID"])
+			if err != nil {
+				return util.JSONResponse{
+					Code: http.StatusBadRequest,
+					JSON: spec.InvalidParam("Unable to determine room version"),
+				}
+			}
+			var userID *spec.UserID
+			var err error
+			if roomVer == gomatrixserverlib.RoomVersionPseudoIDs {
+			*/
+			// TODO: KENJI Decrypt the encrypted userID of the invitee here the .key file.
+			rsaPrivateKey, err := loadAndParseTLSPrivateKey("server.key")
+			if err != nil {
+				return util.JSONResponse{
+					Code: http.StatusInternalServerError,
+					JSON: spec.InternalServerError{Err: "unable to fetch private key"},
+				}
+			}
 
-			// TODO: Decrypt the encrypted userID of the invitee here.
-			// roomVer, err := rsAPI.QueryRoomVersionForRoom(req.Context(),vars["roomID"])
-			// if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
-			//  userID, err := spec.DecryptUserID(vars["userID"], true)
-			// }
-			userID, err := spec.NewUserID(vars["userID"], true)
+			// the userId is sent as @encryptedLocalpart:domain so need to parse to isolate localpart
+			encryptedUserIDBase64 := vars["userID"]
+			encryptedUserID, err := spec.NewEncryptedUserID(encryptedUserIDBase64, true)
+			if err != nil {
+				return util.JSONResponse{
+					Code: http.StatusInternalServerError,
+					JSON: spec.InternalServerError{Err: "Unable to create encryptedUserID: " + err.Error()},
+				}
+			}
+			encryptedBytes, err := base64.StdEncoding.DecodeString(encryptedUserID.Local())
+			if err != nil {
+				return util.JSONResponse{
+					Code: http.StatusInternalServerError,
+					JSON: spec.InternalServerError{Err: "Unable to base64 decode localpart of the encryptedUserID"},
+				}
+			}
+			decryptedBytes, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, rsaPrivateKey, encryptedBytes, nil)
+			if err != nil {
+				return util.JSONResponse{
+					Code: http.StatusInternalServerError,
+					JSON: spec.InternalServerError{Err: "Unable to decrypted userID"},
+				}
+			}
+
+			userID, err := spec.NewUserID(fmt.Sprintf("@%s:%s", string(decryptedBytes), encryptedUserID.Domain()), true)
+
 			if err != nil {
 				return util.JSONResponse{
 					Code: http.StatusBadRequest,
 					JSON: spec.InvalidParam("Invalid UserID"),
 				}
 			}
+
 			roomID, err := spec.NewRoomID(vars["roomID"])
 			if err != nil {
 				return util.JSONResponse{
@@ -785,4 +834,39 @@ func (f *FederationWakeups) Wakeup(ctx context.Context, origin spec.ServerName) 
 	}
 	f.FsAPI.MarkServersAlive([]spec.ServerName{origin})
 	f.origins.Store(origin, time.Now())
+}
+
+func loadAndParseTLSPrivateKey(path string) (*rsa.PrivateKey, error) {
+	keyBytes, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("private key file not found at %s: %w", path, err)
+		}
+		return nil, fmt.Errorf("failed to read private key file %s: %w", path, err)
+	}
+
+	block, _ := pem.Decode(keyBytes)
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block from private key file %s (file might not be PEM encoded)", path)
+	}
+	if block.Type != "PRIVATE KEY" && block.Type != "RSA PRIVATE KEY" && block.Type != "EC PRIVATE KEY" {
+		log.Printf("Warning: PEM block type is '%s' for %s, expected 'PRIVATE KEY' or 'RSA PRIVATE KEY'\n", block.Type, path)
+	}
+
+	privKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err == nil {
+		rsaPrivKey, ok := privKey.(*rsa.PrivateKey)
+		if ok {
+			return rsaPrivKey, nil
+		} else {
+			return nil, fmt.Errorf("key found in %s is a valid PKCS#8 key, but is not an RSA key (it is of type %T)", path, privKey)
+		}
+	}
+
+	rsaPrivKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err == nil {
+		return rsaPrivKey, nil
+	}
+
+	return nil, fmt.Errorf("failed to parse private key from %s: %w. Tried PKCS#8 then PKCS#1. Original error: %v", path, err, err)
 }

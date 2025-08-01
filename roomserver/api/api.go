@@ -251,6 +251,7 @@ type ClientRoomserverAPI interface {
 	PerformPeek(ctx context.Context, req *PerformPeekRequest) (roomID string, err error)
 	PerformUnpeek(ctx context.Context, roomID, userID, deviceID string) error
 	PerformInvite(ctx context.Context, req *PerformInviteRequest) error
+	PerformEncryptedInvite(ctx context.Context, req *PerformEncryptedInviteRequest) error
 	PerformJoin(ctx context.Context, req *PerformJoinRequest) (roomID string, joinedVia spec.ServerName, err error)
 	PerformLeave(ctx context.Context, req *PerformLeaveRequest, res *PerformLeaveResponse) error
 	PerformPublish(ctx context.Context, req *PerformPublishRequest) error

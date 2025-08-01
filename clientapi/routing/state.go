@@ -207,7 +207,6 @@ func OnIncomingStateTypeRequest(
 
 	// Translate user ID state keys to room keys in pseudo ID rooms
 	if roomVer == gomatrixserverlib.RoomVersionPseudoIDs {
-		// TODO: roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity
 		parsedRoomID, err := spec.NewRoomID(roomID)
 		if err != nil {
 			return util.JSONResponse{

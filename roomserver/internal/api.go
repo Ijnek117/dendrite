@@ -247,17 +247,18 @@ func (r *RoomserverInternalAPI) PerformCreateRoom(
 ) (string, *util.JSONResponse) {
 	return r.Creator.PerformCreateRoom(ctx, userID, roomID, createRequest)
 }
-//Kenji: internal api instance?
 func (r *RoomserverInternalAPI) PerformInvite(
 	ctx context.Context,
 	req *api.PerformInviteRequest,
 ) error {
-	// TODO: remove this if not addign anything
-	// info, err := r.DB.RoomInfo(ctx, req.InviteInput.RoomID.String())
-	// if err != nil && info.RoomVersion == gomatrixserverlib.RoomVersionPseudoAnonymity{
-	// 	return r.Inviter.PerformEncryptedInvite(ctx, req)
-	// }
 	return r.Inviter.PerformInvite(ctx, req)
+}
+
+func (r *RoomserverInternalAPI) PerformEncryptedInvite(
+	ctx context.Context,
+	req *api.PerformEncryptedInviteRequest,
+) error {
+	return r.Inviter.PerformEncryptedInvite(ctx, req)
 }
 
 func (r *RoomserverInternalAPI) PerformLeave(

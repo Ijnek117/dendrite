@@ -315,16 +315,14 @@ func SendInvite(
 		return *errRes
 	}
 
-	// TODO: choose between the two options:
-	roomVer, err := rsAPI.QueryRoomVersionForRoom(req.Context(),roomID) 
+	roomVer, err := rsAPI.QueryRoomVersionForRoom(req.Context(), roomID)
 	if err != nil {
 		return util.JSONResponse{
 			Code: http.StatusInternalServerError,
 			JSON: spec.InternalServerError{},
 		}
 	}
-			
-	// if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
+
 	if roomVer == gomatrixserverlib.RoomVersionPseudoIDs {
 		response, _ := sendEncryptedInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
 		return response
@@ -336,65 +334,6 @@ func SendInvite(
 	// We already received the return value, so no need to check for an error here.
 	// response, _ := sendInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
 	// return response
-}
-
-//TODO should be able to completely remove this.
-func SendEncryptedInvite(
-	req *http.Request, profileAPI userapi.ClientUserAPI, device *userapi.Device,
-	roomID string, cfg *config.ClientAPI,
-	rsAPI roomserverAPI.ClientRoomserverAPI, asAPI appserviceAPI.AppServiceInternalAPI,
-) util.JSONResponse {
-	
-	body, evTime, reqErr := extractEncryptedRequestData(req)
-	if reqErr != nil {
-		return *reqErr
-	}
-	
-	if body.UserID == "" {
-		return util.JSONResponse{
-			Code: http.StatusBadRequest,
-			JSON: spec.BadJSON("missing user_id"),
-		}
-	}
-	// No need to change. It is for the senders's UserID.
-	deviceUserID, err := spec.NewUserID(device.UserID, true)
-	if err != nil {
-		return util.JSONResponse{
-			Code: http.StatusForbidden,
-			JSON: spec.Forbidden("You don't have permission to kick this user, bad userID"),
-		}
-	}
-	// No need to change. It is for the sender's UserID.
-	errRes := checkMemberInRoom(req.Context(), rsAPI, *deviceUserID, roomID)
-	if errRes != nil {
-		return *errRes
-	}
-
-	roomVer, err := rsAPI.QueryRoomVersionForRoom(req.Context(),roomID) 
-	if err != nil {
-		return util.JSONResponse{
-			Code: http.StatusInternalServerError,
-			JSON: spec.InternalServerError{},
-		}
-	}
-
-	// if roomVer == gomatrixserverlib.RoomVersionPseudoAnonymity {
-	if roomVer == gomatrixserverlib.RoomVersionPseudoIDs {
-		response, _ := sendEncryptedInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
-		return response
-	} else {
-		response, _ := sendInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
-		return response
-	}
-	// We already received the return value, so no need to check for an error here.
-	// Call encrypted invite handler, could change body.UserID to body.EncryptedID or similar.
-	// if body.IsEncrypted {
-	// 	response, _ := sendEncryptedInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
-	// 	return response
-	// } else {
-	// 	response, _ := sendInvite(req.Context(), device, roomID, body.UserID, body.Reason, cfg, rsAPI, evTime)
-	// 	return response
-	// }
 }
 
 // sendInvite sends an invitation to a user. Returns a JSONResponse and an error
@@ -476,7 +415,8 @@ func sendInvite(
 		JSON: struct{}{},
 	}, nil
 }
-// Changes could probably just be integrated in sendInvite instead. 
+
+// TODO: K Integrate changes in sendInvite instead.
 func sendEncryptedInvite(
 	ctx context.Context,
 	device *userapi.Device,
@@ -500,7 +440,6 @@ func sendEncryptedInvite(
 		}, err
 	}
 
-	// TODO: Modify based how it is encrypted
 	invitee, err := spec.NewEncryptedUserID(userID, true)
 	if err != nil {
 		return util.JSONResponse{
@@ -517,11 +456,10 @@ func sendEncryptedInvite(
 			JSON: spec.InternalServerError{},
 		}, err
 	}
-	err = rsAPI.PerformInvite(ctx, &api.PerformInviteRequest{
-		InviteInput: roomserverAPI.InviteInput{
-			RoomID:  *validRoomID,
-			Inviter: *inviter,
-			//TODO: Modify to include servername OR NOT if the encrypted User_id is similar
+	err = rsAPI.PerformEncryptedInvite(ctx, &api.PerformEncryptedInviteRequest{
+		InviteInput: roomserverAPI.EncryptedInviteInput{
+			RoomID:     *validRoomID,
+			Inviter:    *inviter,
 			Invitee:    *invitee,
 			Reason:     reason,
 			IsDirect:   false,
@@ -553,20 +491,6 @@ func sendEncryptedInvite(
 			JSON: spec.InternalServerError{},
 		}, err
 	}
-
-	// TODO: Don't need to send back the inviteeSenderID I think 
-	// inviteeSenderID, err := rsAPI.QuerySenderIDForUser(ctx, *validRoomID, *invitee)
-	// if err != nil {
-	// 	return util.JSONResponse{
-	// 		Code: http.StatusInternalServerError,
-	// 		JSON: spec.InternalServerError{},
-	// 	}, err
-	// }
-	// // Send the SenderID of the Invitee to the Client.
-	// return util.JSONResponse{
-	// 	Code: http.StatusOK,
-	// 	JSON: inviteeSenderID,
-	// }, nil
 
 	return util.JSONResponse{
 		Code: http.StatusOK,

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	// "crypto/x509"
 	"fmt"
 	"time"
 
@@ -64,9 +65,8 @@ type RoomserverFederationAPI interface {
 	SendInvite(ctx context.Context, event gomatrixserverlib.PDU, strippedState []gomatrixserverlib.InviteStrippedState) (gomatrixserverlib.PDU, error)
 	// Handle sending an invite to a remote server.
 	SendInviteV3(ctx context.Context, event gomatrixserverlib.ProtoEvent, invitee spec.UserID, version gomatrixserverlib.RoomVersion, strippedState []gomatrixserverlib.InviteStrippedState) (gomatrixserverlib.PDU, error)
-	// Handle sending a recipient anonymous invite to a remote server 
-	//TODO: Eventually make it's own method, but not for now as it causes many errors
-	// SendInviteV4(ctx context.Context, event gomatrixserverlib.ProtoEvent, version gomatrixserverlib.RoomVersion, strippedState []gomatrixserverlib.InviteStrippedState) (gomatrixserverlib.PDU, error)
+	// Handle sending a recipient anonymous invite to a remote server
+	SendEncryptedInvite(ctx context.Context, event gomatrixserverlib.ProtoEvent, invitee spec.EncryptedUserID, version gomatrixserverlib.RoomVersion, strippedState []gomatrixserverlib.InviteStrippedState) (gomatrixserverlib.PDU, error)
 	// Handle an instruction to peek a room on a remote server.
 	PerformOutboundPeek(ctx context.Context, request *PerformOutboundPeekRequest, response *PerformOutboundPeekResponse) error
 	// Query the server names of the joined hosts in a room.
@@ -118,7 +118,6 @@ type FederationClientError struct {
 	Err         string
 	RetryAfter  time.Duration
 	Blacklisted bool
-	Code        int // HTTP Status code from the remote server
 }
 
 func (e FederationClientError) Error() string {
