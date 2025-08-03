@@ -154,7 +154,6 @@ func (c *Creator) PerformCreateRoom(ctx context.Context, userID spec.UserID, roo
 
 	memberContent := gomatrixserverlib.MemberContent{
 		Membership:  spec.Join,
-		DisplayName: createRequest.UserDisplayName,
 		AvatarURL:   createRequest.UserAvatarURL,
 	}
 

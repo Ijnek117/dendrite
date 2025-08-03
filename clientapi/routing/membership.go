@@ -516,7 +516,6 @@ func buildMembershipEventDirect(
 
 	content := gomatrixserverlib.MemberContent{
 		Membership:  membership,
-		DisplayName: userDisplayName,
 		AvatarURL:   userAvatarURL,
 		Reason:      reason,
 		IsDirect:    isDirect,
