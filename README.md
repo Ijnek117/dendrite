@@ -2,6 +2,10 @@
 
 [![Build status](https://github.com/element-hq/dendrite/actions/workflows/dendrite.yml/badge.svg?event=push)](https://github.com/element-hq/dendrite/actions/workflows/dendrite.yml) [![Dendrite](https://img.shields.io/matrix/dendrite:matrix.org.svg?label=%23dendrite%3Amatrix.org&logo=matrix&server_fqdn=matrix.org)](https://matrix.to/#/#dendrite:matrix.org) [![Dendrite Dev](https://img.shields.io/matrix/dendrite-dev:matrix.org.svg?label=%23dendrite-dev%3Amatrix.org&logo=matrix&server_fqdn=matrix.org)](https://matrix.to/#/#dendrite-dev:matrix.org)
 
+> **Research Project:** This is a modified fork of the original gomuks repository. The code here contains changes for the Achieving User Pseudonymity in Federated End-to-End Encrypted Messaging Platforms research project.
+
+> For a full description of the modifications this component, please see the **[MODIFICATIONS.md](MODIFICATIONS.md)** file.
+
 Dendrite is a second-generation Matrix homeserver written in Go.
 It intends to provide an **efficient**, **reliable** and **scalable** alternative to [Synapse](https://github.com/matrix-org/synapse):
 
