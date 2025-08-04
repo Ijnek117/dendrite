@@ -256,7 +256,7 @@ func (r *Inviter) PerformEncryptedInvite(
 	ctx context.Context,
 	req *api.PerformEncryptedInviteRequest,
 ) error {
-	// Gets the senderID for that user in this room, I assume it gets assigned at Pseudo RoomCreation.
+	// Gets the senderID for that user in this room, should be assigned at Pseudo RoomCreation.
 	senderID, err := r.RSAPI.QuerySenderIDForUser(ctx, req.InviteInput.RoomID, req.InviteInput.Inviter)
 	if err != nil {
 		return err
@@ -290,7 +290,6 @@ func (r *Inviter) PerformEncryptedInvite(
 
 	isTargetLocal := r.Cfg.Matrix.IsLocalServerName(req.InviteInput.Invitee.Domain())
 
-	// Don't need to change as sender_key's should be managed by server.
 	signingKey := req.InviteInput.PrivateKey
 	if info.RoomVersion == gomatrixserverlib.RoomVersionPseudoIDs {
 		// Private part of the ed25519 key used to sign the invite event 
