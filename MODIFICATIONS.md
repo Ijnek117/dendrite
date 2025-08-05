@@ -8,8 +8,8 @@ This repository is a modified fork of the original Matrix Dendrite homeserver, w
 
 Dendrite was chosen for this project because [MSC4014: Pseudonymous Identities](https://github.com/matrix-org/matrix-spec-proposals/pull/4014), a Matrix Proposal that breaks the association between a user's ID and their activity in a room, had already been implemented in it.
 
-Part of the changes made by MSC4014 was the modification of the `sender` field from a Matrix User ID to a `sender_key` (an ed25519 public key) scoped to a specific per-room, per-user identity. This means that events, such as messages, were no longer directly associated with a user's User ID (their persistent Matrix identity). However, events of type `m.room.member` still contained a mapping between the User ID and the new Sender IDs to allow for routing, cross-room tracking, and other purposes.
-This research project extends the changes made in MSC4014 by removing all plaintext Matrix User IDs in federation, including those in the User ID to Sender ID mappings.
+Part of the changes made by MSC4014 was the modification of the `sender` field from a Matrix User ID to a `sender_key` (an ed25519 public key) scoped to a specific per-room, per-user identity. This means that events, such as messages, were no longer directly associated with a user's User ID (their persistent Matrix identity). However, events of type `m.room.member` still contained a mapping between the User ID and the new sender IDs to allow for routing, cross-room tracking, and other purposes.
+This research project extends the changes made in MSC4014 by removing all plaintext Matrix User IDs, including those in the User ID to sender ID mappings.
 
 ## 2. Summary of Changes
 
